@@ -1,3 +1,4 @@
+import argparse
 import pygame
 import torch
 from DQN import DQN
@@ -10,8 +11,11 @@ RED = (255, 0, 0)
 WHITE = (255, 255, 255)
 
 ### Load trained model ###
+parser = argparse.ArgumentParser(description="Watch a trained Snake agent")
+parser.add_argument("checkpoint", nargs="?", default="models/snake_dqntest.pth")
+args = parser.parse_args()
 model = DQN(n_observations=100, n_actions=4)
-state_dict = torch.load("models/snake_dqntest.pth", map_location="cpu")
+state_dict = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
 model.load_state_dict(state_dict)
 model.eval()
 
