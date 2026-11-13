@@ -5,7 +5,7 @@ This project is an implementation of a Deep Q-Network (DQN) agent that learns to
 ## Features
 
 *   **Snake Game Environment**: A custom Snake game environment built with `gymnasium`.
-*   **DQN Agent**: A Deep Q-Network agent implemented with `PyTorch`.
+*   **DQN Agent**: A convolutional Deep Q-Network agent implemented with `PyTorch`.
 *   **Experience Replay**: An experience replay buffer to store and sample agent's experiences for efficient training.
 *   **Visualization**: A script to visualize the trained agent playing the game using `pygame`.
 
@@ -29,6 +29,11 @@ This project is an implementation of a Deep Q-Network (DQN) agent that learns to
 ### Training
 
 To train the agent, you can run the `main.ipynb` notebook. This notebook will guide you through the training process and allow you to visualize the agent's learning progress.
+
+The environment returns a `(3, 10, 10)` observation with separate head, body,
+and food channels. The CNN uses these spatial observations directly. Models
+trained with the previous fully connected network are incompatible; train a
+new checkpoint before using the visualization script.
 
 ### Visualization
 

@@ -16,15 +16,15 @@ class SnakeEnv(gym.Env):
         self.direction = 0
         self.food = []
         self.place_food(1)
-        self.truncated = False  # If no more space to place food
-        self.terminated = False  # False : snake alive / True : snake dead
+        self.truncated = False  # Episode stopped by the step limit
+        self.terminated = False  # Collision or a completely filled board
         self.info = {}
         self.steps = 0
 
         ### Gym setups ###
         self.observation_space = gym.spaces.Box(
-            low=0, high=2, shape=(self.row * self.col,), dtype=np.float32
-        )  # observation space : grid (row * col)
+            low=0, high=1, shape=(3, self.row, self.col), dtype=np.float32
+        )  # channels: head, body, food
 
         self.action_space = gym.spaces.Discrete(4)  # action space: 4 directions
 
@@ -36,13 +36,23 @@ class SnakeEnv(gym.Env):
                     empty_space.append([i, j])
 
         for i in range(num_food):
-            if len(empty_space) == 0:
-                self.truncated = True
+            if not empty_space:
+                self.terminated = True
                 return
             else:
                 food = random.choice(empty_space)
                 self.food.append(food)
                 self.state[food[0], food[1]] = 2
+
+    def _observation(self):
+        observation = np.zeros(self.observation_space.shape, dtype=np.float32)
+        head_x, head_y = self.snake[0]
+        observation[0, head_x, head_y] = 1
+        for x, y in self.snake[1:]:
+            observation[1, x, y] = 1
+        for x, y in self.food:
+            observation[2, x, y] = 1
+        return observation
 
     def step(self, action):
         reward = 0.0
@@ -72,18 +82,21 @@ class SnakeEnv(gym.Env):
             reward -= 20
             self.terminated = True
             return (
-                self.state.flatten(),
+                self._observation(),
                 reward,
                 self.terminated,
                 self.truncated,
                 self.info,
             )
 
-        if new_head in self.snake:  # check self-collision
+        growing = new_head in self.food
+        # The tail moves away unless the snake eats on this step.
+        occupied = self.snake if growing else self.snake[:-1]
+        if new_head in occupied:  # check self-collision
             reward -= 20
             self.terminated = True
             return (
-                self.state.flatten(),
+                self._observation(),
                 reward,
                 self.terminated,
                 self.truncated,
@@ -95,14 +108,14 @@ class SnakeEnv(gym.Env):
             self.truncated = True
             reward -= 10.0
             return (
-                self.state.flatten(),
+                self._observation(),
                 reward,
                 self.terminated,
                 self.truncated,
                 self.info,
             )
 
-        if new_head in self.food:  # check food collision
+        if growing:  # check food collision
             self.snake.insert(0, new_head)
             self.food.remove(new_head)
             self.score += 1
@@ -114,16 +127,17 @@ class SnakeEnv(gym.Env):
             self.snake.pop()  # remove the last one
 
         ### calculate reward ###
-        old_distance = abs(old_head[0] - self.food[0][0]) + abs(
-            old_head[1] - self.food[0][1]
-        )
-        new_distance = abs(new_head[0] - self.food[0][0]) + abs(
-            new_head[1] - self.food[0][1]
-        )
-        if new_distance < old_distance:
-            reward += 1.0
-        else:
-            reward -= 1.5
+        if self.food:
+            old_distance = abs(old_head[0] - self.food[0][0]) + abs(
+                old_head[1] - self.food[0][1]
+            )
+            new_distance = abs(new_head[0] - self.food[0][0]) + abs(
+                new_head[1] - self.food[0][1]
+            )
+            if new_distance < old_distance:
+                reward += 1.0
+            else:
+                reward -= 1.5
 
         ### update state ###
         self.state = np.zeros((self.row, self.col))  # reset the field
@@ -135,12 +149,12 @@ class SnakeEnv(gym.Env):
         self.direction = action  # update the direction
 
         return (
-            self.state.flatten().astype(np.float32),
+            self._observation(),
             reward,
             self.terminated,
             self.truncated,
             self.info,
-        )  # return state, reward, terminated : end by death, truncated : natural end, info
+        )  # terminated: collision or full board; truncated: step limit
 
     def render(self):
         print("Score : ", self.score)
@@ -166,4 +180,4 @@ class SnakeEnv(gym.Env):
         self.terminated = False
         self.info = {}
         self.steps = 0
-        return self.state.flatten().astype(np.float32), self.info
+        return self._observation(), self.info

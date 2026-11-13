@@ -10,17 +10,15 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
 
-### Load trained model ###
+### Environment and model setup ###
+env = SnakeEnv()
 parser = argparse.ArgumentParser(description="Watch a trained Snake agent")
 parser.add_argument("checkpoint", nargs="?", default="models/snake_dqntest.pth")
 args = parser.parse_args()
-model = DQN(n_observations=100, n_actions=4)
+model = DQN(observation_shape=env.observation_space.shape, n_actions=env.action_space.n)
 state_dict = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
 model.load_state_dict(state_dict)
 model.eval()
-
-### Environment setup ###
-env = SnakeEnv()
 
 ### Pygame setups ###
 pygame.init()
